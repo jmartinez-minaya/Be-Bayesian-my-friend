@@ -1,15 +1,14 @@
 
-Welcome to the course Be Bayesian my friend!. I hope I can help you understand Bayesian inference as much as I would like to.
+# Welcome to the course Be Bayesian my friend!
 
-Are you ready?
+This is a course for everyone who want to start learning Bayesian Inference. I hope I can help you understand Bayesian inference as much as I would like to.
 
-Let's go!
+**Are you ready?**
+
+**Let's go!**
 
 
-================
-This is a course for everyone who want to start learning Bayesian Inference. 
-
-# Program
+## Program
 
 The course is divided in two parts combining theoretical and practical aspects, and the idea is to teach it in two hours.
 
@@ -17,7 +16,7 @@ The course is divided in two parts combining theoretical and practical aspects, 
  
 **PART II: Hierarchical Bayesian models**. Definition. Computation. MCMC methods. Metropolis Hastings. An application to disease mapping. 
 
-# Software
+## Software
 
 To take full advantage of the course, it is necessary that everyone has the following programs installed:
 
@@ -25,7 +24,7 @@ To take full advantage of the course, it is necessary that everyone has the foll
 - [RStudio](https://www.rstudio.com/products/rstudio/download/).
 - [OpenBUGS]( https://www.mrc-bsu.cam.ac.uk/software/bugs/openbugs/)
 
-# R packages
+## R packages
 
 This will be the packages required for the course
 
