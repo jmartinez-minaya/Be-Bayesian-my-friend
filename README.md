@@ -1,5 +1,10 @@
 
-Be Bayesian my friend
+Welcome to the course Be Bayesian my friend!. I hope I can help you understand Bayesian inference as much as I would like to.
+
+Are you ready?
+
+Let's go!
+
 
 ================
 This is a course for everyone who want to start learning Bayesian Inference. 
@@ -10,10 +15,7 @@ The course is divided in two parts combining theoretical and practical aspects, 
 
 **PART I: Introduction to Bayesian inference**. History of Bayes theorem. Bayes theorem. Bayesian inference. Posterior distribution. Credible intervals. Predictive distribution.
  
-**PART II: Hierarchical Bayesian models**.  Latent Gaussian models (LGMs). Laplace approximation. Gaussian Markov random fields (GMRFs). Fitting GLMMs using INLA. Structured temporal and spatial random effects.
- 
-**class2-PART 3: Geostatistics using INLA and SPDE**. Geostatistics in the context of LGMs. The Stochastic partial differential equation (SPDE). 
- 
+**PART II: Hierarchical Bayesian models**. Definition. Computation. MCMC methods. Metropolis Hastings. An application to disease mapping. 
 
 # Software
 
@@ -21,24 +23,15 @@ To take full advantage of the course, it is necessary that everyone has the foll
 
 - version 4.0.0 of [R](https://cran.r-project.org/) or posterior, and
 - [RStudio](https://www.rstudio.com/products/rstudio/download/).
+- [OpenBUGS]( https://www.mrc-bsu.cam.ac.uk/software/bugs/openbugs/)
 
 # R packages
 
 This will be the packages required for the course
 
 ```r
-install.packages(pkgs = c("ggplot2", "gridExtra", "maptools", "rgdal", "spdep", "lattice", "latticeExtra", "viridis", "splancs", "lattice", "fields", "plotKML", "raster", "sp"))
+install.packages(pkgs = c("ggplot2", "gridExtra", "maptools", "rgdal", "spdep", "lattice", "latticeExtra", "viridis", "splancs", "lattice", "fields", "plotKML", "raster", "sp", "R2OpenBUGS", "LearnBayes", "dplyr", "coda"))
 
 ```
 
-The R-INLA package can be downloaded directly from the webpage https://www.r-inla.org/download-install
 
-```r
-### --- INLA --- ###
-install.packages("INLA", repos="https://inla.r-inla-download.org/R/stable")
-```
-
-Also, other packages from Bioconductor
-```r
-BiocManager::install(c("graph", "Rgraphviz"), dep=TRUE)
-```
