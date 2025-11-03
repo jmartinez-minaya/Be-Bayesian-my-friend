@@ -1,0 +1,340 @@
+---
+title: "Bayesian Logistic Regression in brms"
+author: "Joaquín Martínez-Minaya"
+date: "`r Sys.Date()`"
+linestretch: "1.5"
+
+output:   
+  bookdown::html_document2:
+    df_print: paged
+    code_folding: show
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(brms)
+```
+
+# Introduction
+
+This document illustrates how to implement Bayesian logistic regression using the `brms` package. The goal is to model the relationship between myocardial infarction (MI) and two predictors: age and systolic blood pressure (SBP).
+
+
+# Problem Description
+
+<div style="float: right; margin-right: 20px; width: 50%;">
+  ```{r, echo=FALSE, out.width='100%'}
+  knitr::include_graphics('heart.png')
+  ```
+</div>
+
+
+This study is inspired by an example which investigates the relationship between myocardial infarction and several clinical variables. The dataset and problem are adapted from: Broemeling, L. D. (2013). *Bayesian Methods in Epidemiology*. CRC Press.
+
+
+
+In particular, we examines the relationship between myocardial infarction (MI) and two covariates, age and systolic blood pressure (SBP). Specifically:
+
+- **Age**:
+  - Represented by the variable `age`, categorized as:
+    - `age60 = 1`: Patients aged \(\geq 60\) years.
+    - `age60 = 0`: Patients aged \(< 60\) years.
+
+- **Systolic Blood Pressure (SBP)**:
+  - Represented by the variable `SBP`, categorized as:
+    - `SBP140 = 1`: SBP \(\geq 140\) mmHg.
+    - `SBP140 = 0`: SBP \(< 140\) mmHg.
+
+
+The response variable \(y\) represents the occurrence of **myocardial infarction (MI)**:
+
+  - \(y = 1\): MI occurrence (heart attack).
+
+  - \(y = 0\): No MI occurrence.
+
+The goal of the analysis is to assess how `age60` and `SBP140` influence the probability of MI. 
+```{r}
+data_hattack <- readxl::read_xlsx("heartattack.xlsx")
+data_hattack$sbp140 <- as.factor(data_hattack$sbp140)
+data_hattack$age60 <- as.factor(data_hattack$age60)
+data_hattack
+```
+
+
+# Model Specification
+
+In this study, we use a logistic regression model to assess the relationship between myocardial infarction (MI) and the categorical covariates age60 and sbp140. The model is specified as follows:
+
+**likelihood:**
+
+\begin{eqnarray}
+y_i & \sim & \text{Ber}(\pi_i) \,, i = 1, \ldots, 450, \nonumber \\
+\text{logit}(\pi_i) & = & \beta_0 + \beta_1 \cdot \text{age60}_i + \beta_2 \cdot \text{SBP140}_i,
+\end{eqnarray}
+where:
+
+- \(\pi_i\): Probability of MI for patient \(i\).
+
+- \(\text{age60}_i\): Binary indicator for age (\(1\) if \(\geq 60\) years, \(0\) otherwise).
+
+- \(\text{SBP140}_i\): Binary indicator for SBP (\(1\) if \(\geq 140\) mmHg, \(0\) otherwise).
+
+- \(\beta_0\): Intercept, representing the baseline log-odds of MI when \(\text{age60}_i = 0\) and \(\text{SBP140}_i = 0\).
+
+- \(\beta_1\): Log-odds ratio for age (\( \geq 60 \) vs. \( < 60 \)).
+
+- \(\beta_2\): Log-odds ratio for SBP (\( \geq 140 \) mmHg vs. \( < 140 \) mmHg).
+
+**Priors:**
+
+In the Bayesian framework, prior distributions are assigned to the model parameters to express prior beliefs about their values. For this model, we use non-informative priors to reflect minimal prior knowledge:
+
+- \(\beta_0 \sim \mathcal{N}(0, 10^3)\): A normal distribution with mean 0 and very large variance, representing vague prior information about the intercept.
+- \(\beta_1 \sim \mathcal{N}(0, 10^3)\): A normal distribution with mean 0 and very large variance, representing vague prior information about the effect of age.
+- \(\beta_2 \sim \mathcal{N}(0, 10^3)\): A normal distribution with mean 0 and very large variance, representing vague prior information about the effect of SBP.
+
+These priors allow the data to dominate the posterior inference, ensuring that the results are primarily driven by the observed data.
+
+
+
+# `brms` Implementation
+
+This section outlines the implementation of the Bayesian logistic regression model in `brms`, including model specification, running the analysis with `brms`, and performing convergence diagnostics. 
+
+## Priors
+
+The model specifies the relationship between myocardial infarction (MI) and two covariates, `age60` and `sbp140`, using a logistic regression framework. The response variable \(y\) follows a Bernoulli distribution, and the log-odds of \(y\) are modeled as a linear function of the covariates:
+
+```{r, echo=TRUE}
+formula <- bf(y ~ age60 + sbp140, family = bernoulli())
+
+# Define the priors
+priors <- c(
+  brms::prior(normal(0, sqrt(1000)), class = "b", coef = "age60>EQ60"),
+  brms::prior(normal(0, sqrt(1000)), class = "b", coef = "sbp140>EQ140"),
+  brms::prior(normal(0, sqrt(1000)), class = "Intercept")  # Prior for the intercept
+)
+```
+
+## Bayesian Inference with `brms`
+
+Before running the Bayesian inference algorithm with `brms`, it is essential to understand the key parameters used to configure the MCMC process:
+
+1. **`chains`**: Number of independent MCMC chains. Running multiple chains ensures better convergence diagnostics and robustness of results.
+   - **Recommendation**: Use 3-4 chains for most models, which provides a good balance between computational cost and reliable diagnostics.
+
+2. **`warmup`**: Number of initial iterations discarded (analogous to "burn-in") to allow the chains to stabilize and converge to the posterior distribution.
+   - **Recommendation**: Set this to 20-25% of the total iterations, depending on model complexity. For example, with 5000 iterations, use around 1000-1500 for warmup.
+
+3. **`iter`**: Total number of iterations per chain, including both warmup and sampling iterations.
+   - **Recommendation**: Set the total number of iterations to ensure sufficient effective samples after warmup. Typically, 4000-5000 iterations per chain are recommended for most models.
+
+4. **`thin`**: Interval at which samples are retained. For instance, `thin = 2` retains every second sample, which can help reduce autocorrelation between samples.
+   - **Recommendation**: For well-mixing chains, use `thin = 1`. Increase this value if the chains show high autocorrelation or if computational efficiency is a concern.
+
+5. **`seed`**: A random seed used to ensure reproducibility of results.
+   - **Recommendation**: Always set a seed (`seed = 123` or similar) to guarantee that results are reproducible, especially for scientific reporting.
+
+These parameters help control the behavior of the MCMC sampler in `brms`, ensuring that the resulting posterior samples are reliable and that the model has converged adequately to the posterior distribution.
+
+
+
+Now, we use these parameters to configure and run the Bayesian inference using `brms`:
+
+```{r, message = FALSE, warning = FALSE}
+# Fit the model using brms
+fit_brms <- brm(formula,
+    data = data_hattack,
+    prior = priors,
+    chains = 3,      # Number of MCMC chains
+    iter = 5000,     # Total number of iterations per chain
+    warmup = 1000,   # Number of iterations for warm-up
+    thin = 1,        # Thinning interval
+    seed = 123,      # Seed for reproducibility
+  )
+summary(fit_brms)
+#loo::waic(fit_brms)
+```
+
+
+## Convergence Diagnostics
+After obtaining the results, it is essential to assess both model convergence and fit to ensure reliable inference.
+
+For each parameter, convergence diagnostics are provided:
+
+- **Rhat**: This statistic indicates whether all chains have likely converged. **Values close to 1** suggest good convergence. In our model, all Rhat values are close to 1, indicating that the chains have converged satisfactorily across parameters.
+
+- **Bulk_ESS** and **Tail_ESS**: These are effective sample sizes for the bulk and tail of the posterior distribution, respectively. High values (typically >1000) suggest stable estimates. In our model, both Bulk_ESS and Tail_ESS values meet this threshold, which confirms the stability of parameter estimates.
+
+Together, these diagnostics offer insights into model adequacy and sampling efficiency. High effective sample sizes support that our model has accurately captured the posterior distribution, while Rhat values close to 1 reflect consistent chain convergence. Therefore, these indicators suggest that the model has converged well and fits the data reliably, allowing us to interpret the results with confidence.
+
+Another useful way to assess convergence is through visualizations, specifically by using trace plots and density plots.
+
+The **trace plots** display the sampling path of each parameter across iterations. Ideally, the trace plots should show a pattern with consistent variability and no obvious trends or large shifts, indicating that the model has explored the full range of possible values and suggesting good convergence. In these plots:
+
+- The x-axis represents the sampling iterations after warm-up.
+
+- The y-axis shows the values sampled from the posterior distribution for each parameter.
+
+On the left side, the **density plots** display the distribution of the posterior samples for each parameter’s mean value. The peak of the density plot corresponds to the most frequently sampled values, which aligns closely with the mean estimate provided by the summary function. This peak, or mode, should approximate the mean value that appears in the model summary.
+
+For instance, if we observe the intercept’s density plot, it is centered around the estimated value from the summary (e.g., around -2.28 for the intercept in our case). This alignment confirms that our model has not only converged but also provides a consistent estimate of the parameter values.
+
+```{r}
+plot(fit_brms)
+```
+
+
+
+## Hypothesis testing
+
+Añadir el contraste de hipótesis sobre los parámetros
+
+
+## Interpreting Results
+
+In this section, we calculate the odds ratios for `age60` and `sbp140` by transforming the posterior samples of the coefficients using the exponential function. The odds ratio represents the change in the odds of myocardial infarction (MI) for a one-unit increase in the predictor.
+
+```{r, warning = FALSE}
+# Extract posterior samples
+posterior_samples <- brms::as_draws_df(fit_brms) %>% 
+  dplyr::select(starts_with("b_age60>EQ60"), starts_with("b_sbp140>EQ140"))
+names(posterior_samples) <- c("b_age60", "b_sbp140")
+
+# Calculate odds ratios for age60 and sbp140
+posterior_samples <- posterior_samples %>%
+  dplyr::mutate(
+    odds_ratio_age60 = exp(b_age60),
+    odds_ratio_sbp140 = exp(b_sbp140)
+  )
+
+# Summarize odds ratios
+summary_odds_ratios <- posterior_samples %>%
+  summarise(
+    median_age60 = median(odds_ratio_age60),
+    mean_age60 = mean(odds_ratio_age60),
+    sd_age60 = sd(odds_ratio_age60),
+    lower95_age60 = quantile(odds_ratio_age60, 0.025),
+    upper95_age60 = quantile(odds_ratio_age60, 0.975),
+    median_sbp140 = median(odds_ratio_sbp140),
+    mean_sbp140 = mean(odds_ratio_sbp140),
+    sd_sbp140 = sd(odds_ratio_sbp140),
+    lower95_sbp140 = quantile(odds_ratio_sbp140, 0.025),
+    upper95_sbp140 = quantile(odds_ratio_sbp140, 0.975)
+  )
+
+# Print the summary
+print(summary_odds_ratios)
+```
+
+```{r}
+# Pivot the odds ratios data to long format for easier plotting
+posterior_samples_long <- posterior_samples %>%
+  tidyr::pivot_longer(cols = c("odds_ratio_age60", "odds_ratio_sbp140"),
+                      names_to = "parameter", values_to = "odds_ratio")
+
+# Plot posterior densities of odds ratios using ggplot2
+ggplot(posterior_samples_long, aes(x = odds_ratio, fill = parameter)) +
+  geom_density(alpha = 0.5) +
+  labs(title = "Posterior Density of Odds Ratios",
+       x = "Odds Ratio",
+       y = "Density",
+       fill = "Parameter") +
+  theme_minimal()
+```
+
+
+The plot above shows the posterior densities of the odds ratios for age60 and sbp140. Higher density regions indicate more probable values for the odds ratios. The interpretation of the parameters is as follows:
+
+- For the odds ratio of age60 with a posterior median of 1.926, the implication is that **the odds of a heart attack for a person older than 60 years is approximately 1.926 times the odds of a heart attack for a person younger than 60**. 
+
+- For the odds ratio of sbp140, the median is 2.76, implying that **the odds of a heart attack for a person with a systolic blood pressure greater than 140 mmHg are approximately 2.76 times the odds for a person with lower blood pressure**. 
+
+- The 95% credible intervals for both odds ratios do not include the value 1, suggesting that both age and SBP have a relevant effect on the occurrence of a heart attack.
+
+REMEMBER: this is a simulated dataset. Don't freak out if your blood preasure es greater than 140 mmHg or your age is greater than 60.
+
+
+
+# Predictions
+
+## Predictions for four new people 
+
+There are four new people with the following characteristics:
+
+- Individual1: He is under 60, with 135 mmHg
+
+- Invididual2: She is over 60, with 141 mmHg
+
+- Individual3: She is under 60, with 150 mmHg
+
+- Individual4: she is over 60, with 120 mmHg
+
+Next, we predict the probability of myocardial infarction for new individuals with specific characteristics based on the fitted model.
+
+```{r}
+# Create new data for predictions
+new_data <- tibble(
+  age60 = factor(c("<60", ">=60", "<60", ">=60"), levels = c("<60", ">=60")),
+  sbp140 = factor(c("<140", ">=140", ">=140", "<140"), levels = c("<140", ">=140"))
+)
+
+# Predict the probability of myocardial infarction (MI) for new individuals
+predictions <- posterior_epred(fit_brms, newdata = new_data, re_formula = NA)
+
+# Summarize the predictions
+summary_predictions <- tibble(
+  age60 = new_data$age60,
+  sbp140 = new_data$sbp140,
+  mean_probability = apply(predictions, 2, mean),
+  lower95 = apply(predictions, 2, quantile, 0.025),
+  upper95 = apply(predictions, 2, quantile, 0.975)
+)
+
+# Print the summarized predictions
+print(summary_predictions)
+
+```
+
+
+The prediction step provides us with posterior probabilities of myocardial infarction for different age and blood pressure categories. These summaries include the posterior mean and the 95% credible interval, helping us understand the likelihood of MI for different groups in the population.
+
+
+## Decision rule based on posterior risk
+
+The posterior distribution obtained from the model allows us to evaluate each individual’s **risk of myocardial infarction** in a probabilistic way.
+
+To guide clinical action, we define a simple decision rule based on this posterior risk:
+- If the **true risk of infarction** exceeds **0.25**, the patient is considered at high risk and **should receive treatment**.
+
+Using the posterior draws from the model, we compute
+$P(p_i > 0.25 \mid \boldsymbol{y})$
+which quantifies **how confident we are** that a patient’s true risk is above the clinical threshold.
+
+In practice, we will make a decision **only when this probability is greater than 0.8**, meaning there is at least an 80% posterior certainty that the patient’s risk exceeds 0.25.
+
+
+```{r}
+# Posterior probability that the risk exceeds 0.25
+Pr_mat <- t(apply(predictions, 2, function(p) c(
+Pr_gt_0.25 = mean(p > 0.25)
+)))
+Pr_mat
+```
+
+The results show clear differences in the posterior probabilities that each individual’s risk exceeds the clinical threshold of 0.25. Patients with a posterior probability close to **1** can be considered to have a **high and well-supported risk**, indicating strong evidence that treatment should be administered.  
+
+In contrast, those with posterior probabilities around **0.2** or **below 0.1** have a **very low chance** of truly exceeding the risk threshold, suggesting that treatment is **not warranted** under the current decision rule.
+
+This simple example illustrates how Bayesian inference allows not only to estimate the risk itself but also to **quantify the uncertainty** associated with it, providing a clear and interpretable measure that directly supports individualized and probabilistic decision-making.
+
+
+
+
