@@ -1,6 +1,6 @@
 # Be Bayesian my friend
 
-Welcome to the short course **“Be Bayesian my friend”**, delivered at the **IV Congreso & XV Jornadas de Usuarios de R (UPV)**.  
+Welcome to the short course **“Be Bayesian my friend”**, delivered at the **IV Congreso & XV Jornadas de Usuarios de R**.  
 
 This course is designed for anyone interested in understanding and applying the principles of **Bayesian Inference** using **R** and modern computational tools.  
 The goal is to bridge theory and practice, introducing participants to the Bayesian mindset and its implementation through real examples.
@@ -12,13 +12,13 @@ The goal is to bridge theory and practice, introducing participants to the Bayes
 The workshop combines conceptual understanding with hands-on practice.  
 It is divided into **two main parts**, to be covered in approximately **two hours**.
 
-### **PART I — Introduction to Bayesian Inference**
+### **PART I — An Introduction to Bayesian Learning**
 - History of Bayes’ theorem  
 - Bayes’ theorem and its interpretation  
 - Bayesian inference and posterior distribution  
 - Credible intervals and predictive distributions  
 
-### **PART II — Hierarchical Bayesian Models**
+### **PART II — Bayesian Computation and Mixed Models**
 - From simple models to hierarchical structures  
 - Bayesian computation: MCMC, Gibbs, and Metropolis–Hastings  
 - Fitting models with `brms`  
@@ -32,7 +32,6 @@ To take full advantage of the course, please make sure you have the following so
 
 - [R (version 4.5.1 or later)](https://cran.r-project.org/) — the R 4.5.1 “Great Square Root” release or newer is recommended.  
 - [RStudio](https://www.rstudio.com/products/rstudio/download/) — for a user-friendly coding interface.  
-- [OpenBUGS](https://www.mrc-bsu.cam.ac.uk/software/bugs/openbugs/) — for classical Bayesian computation examples.  
 
 ---
 
@@ -43,8 +42,7 @@ The following R packages are required for the theoretical and practical parts of
 ```r
 install.packages(pkgs = c(
   "ggplot2", "gridExtra", "dplyr", "readxl", "brms",
-  "LearnBayes", "coda"
-))
+  "LearnBayes", "coda"))
 ```
 
 Additional dependencies may be installed automatically when loading the main packages.
@@ -92,7 +90,11 @@ By the end of this short course, participants will be able to:
 
 **Joaquín Martínez-Minaya**  
 Departamento de Estadística e Investigación Operativa Aplicadas y Calidad (DEIOAC)  
-Universitat Politècnica de València (UPV)
+Universitat Politècnica de València (UPV)  
+
+📧 **Email:** [jmarmin@eio.upv.es](mailto:jmarmin@eio.upv.es)  
+🌐 **Website:** [https://github.com/jmartinez-minaya](https://github.com/jmartinez-minaya)
+
 
 ---
 
