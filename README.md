@@ -70,9 +70,12 @@ Be_Bayesian_My_Friend/
 ├── Practical-lesson/
 │   ├── S1-brms-heart_attack/
 │   │   └── S1-brms-heart_attack.Rmd
-│   │
 │   └── S1-JAGS-heart_attack/
 │       └── S1-JAGS-heart_attack.Rmd
+│
+├── Homework/
+│   └── S1-brms-diabetes/
+│       └── S1-brms-diabetes.Rmd
 │
 └── README.md
 
@@ -80,7 +83,7 @@ Be_Bayesian_My_Friend/
 
 - **Theory/** contains the conceptual slides and explanations (both in HTML and PDF).  
 - **Practical-lesson/** includes applied exercises, such as a logistic regression example using the `brms` package.  
-
+- **Homework/** contain an exercise designed for self-assessment and practice.  
 ---
 
 ## 🎯 Learning Outcomes
