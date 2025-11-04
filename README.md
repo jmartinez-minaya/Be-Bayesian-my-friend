@@ -3,7 +3,7 @@
 Welcome to the short course **“Be Bayesian my friend”**, delivered at the **IV Congreso & XV Jornadas de Usuarios de R**.  
 
 This course is designed for anyone interested in understanding and applying the principles of **Bayesian Inference** using **R** and modern computational tools.  
-The goal is to bridge theory and practice, introducing participants to the Bayesian mindset and its implementation through real examples.
+The goal is to bridge theory and practice, introducing participants to the Bayesian mindset and its implementation through some examples.
 
 ---
 
@@ -26,12 +26,16 @@ It is divided into **two main parts**, to be covered in approximately **two hour
 
 ---
 
+
 ## 💻 Software Requirements
 
 To take full advantage of the course, please make sure you have the following software installed:
 
 - [R (version 4.5.1 or later)](https://cran.r-project.org/) — the R 4.5.1 “Great Square Root” release or newer is recommended.  
 - [RStudio](https://www.rstudio.com/products/rstudio/download/) — for a user-friendly coding interface.  
+- [**JAGS**](https://sourceforge.net/projects/mcmc-jags/) — required for the `runjags` examples (used in the *S1-JAGS-heart_attack* practical exercise).  
+
+> ⚠️ **Note:** `runjags` requires that the **JAGS** software is installed separately from the above link.
 
 ---
 
@@ -42,7 +46,8 @@ The following R packages are required for the theoretical and practical parts of
 ```r
 install.packages(pkgs = c(
   "ggplot2", "gridExtra", "dplyr", "readxl", "brms",
-  "LearnBayes", "coda"))
+  "LearnBayes", "coda", "runjags"
+))
 ```
 
 Additional dependencies may be installed automatically when loading the main packages.
@@ -63,10 +68,14 @@ Be_Bayesian_My_Friend/
 │   └── Be Bayesian my Friend. Part II_ Bayesian Computation and Mixed Models.pdf
 │
 ├── Practical-lesson/
-│   └── S1-brms-heart_attack/
-│       └── S1-brms-heart_attack.Rmd
+│   ├── S1-brms-heart_attack/
+│   │   └── S1-brms-heart_attack.Rmd
+│   │
+│   └── S1-JAGS-heart_attack/
+│       └── S1-JAGS-heart_attack.Rmd
 │
 └── README.md
+
 ```
 
 - **Theory/** contains the conceptual slides and explanations (both in HTML and PDF).  
