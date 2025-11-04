@@ -59,12 +59,31 @@ The response variable \(y\) represents the occurrence of **myocardial infarction
 
   - \(y = 0\): No MI occurrence.
 
-The goal of the analysis is to assess how `age60` and `SBP140` influence the probability of MI. 
+The goal of the analysis is to assess how `age60` and `SBP140` relates with the probability of MI. 
 ```{r}
 data_hattack <- readxl::read_xlsx("heartattack.xlsx")
-data_hattack$sbp140 <- as.factor(data_hattack$sbp140)
-data_hattack$age60 <- as.factor(data_hattack$age60)
-data_hattack
+
+# --- Recode factor levels to syntactically safe names ---
+data_hattack <- data_hattack %>%
+  mutate(
+    age60 = as.factor(age60),
+    sbp140 = as.factor(sbp140)
+  ) %>%
+  mutate(
+    # Rename levels for age60
+    age60 = forcats::fct_recode(age60,
+      leq60 = "<60",
+      geq60 = ">=60"
+    ),
+    # Rename levels for sbp140
+    sbp140 = forcats::fct_recode(sbp140,
+      leq140 = "<140",
+      geq140 = ">=140"
+    ))
+
+
+# Check result
+dplyr::count(data_hattack, age60, sbp140)
 ```
 
 
@@ -117,9 +136,9 @@ formula <- bf(y ~ age60 + sbp140, family = bernoulli())
 
 # Define the priors
 priors <- c(
-  brms::prior(normal(0, sqrt(1000)), class = "b", coef = "age60>EQ60"),
-  brms::prior(normal(0, sqrt(1000)), class = "b", coef = "sbp140>EQ140"),
-  brms::prior(normal(0, sqrt(1000)), class = "Intercept")  # Prior for the intercept
+  prior(normal(0, sqrt(1000)), class = "b", coef = "age60geq60"),
+  prior(normal(0, sqrt(1000)), class = "b", coef = "sbp140geq140"),
+  prior(normal(0, sqrt(1000)), class = "Intercept")
 )
 ```
 
@@ -195,7 +214,66 @@ plot(fit_brms)
 
 ## Hypothesis testing
 
-Añadir el contraste de hipótesis sobre los parámetros
+### Two-sided tests (equivalent to testing beta != 0)
+In the Bayesian framework, two-sided tests are commonly interpreted through the **credible intervals** of the posterior distributions.  
+This approach is conceptually similar to the frequentist significance test:  
+if the **95% credible interval** for a regression coefficient does **not** include zero, there is strong posterior evidence that the effect differs from zero.
+
+Below we perform formal two-sided tests using the `hypothesis()` function, which computes posterior summaries and evidence ratios for the null hypothesis \( H_0: \beta = 0 \).
+
+```{r, message=FALSE}
+H_2s <- hypothesis(
+  fit_brms,
+  c("age60geq60 = 0", "sbp140geq140 = 0"),
+  alpha = 0.05
+)
+
+H_2s
+```
+
+
+
+### One-sided tests
+Following [Paul Bürkner’s official guide](https://deepwiki.com/paul-buerkner/brms/4.4-hypothesis-testing), we perform one-sided Bayesian hypothesis tests to jointly assess whether the effects of **age ≥ 60** and **systolic blood pressure ≥ 140 mmHg** increase the risk of myocardial infarction.
+
+For each parameter, we test:
+$$
+H_0: \beta \le 0 \quad \text{vs.} \quad H_1: \beta > 0
+$$
+
+`Post.Prob` represents \( P(\beta > 0 \mid \text{data}) \), while `Evid.Ratio` gives the **odds** of \( \beta > 0 \) over its complement:
+$$
+\text{Evid.Ratio} \;=\; \frac{P(\beta > 0 \mid y)}{1 - P(\beta > 0 \mid y)}.
+$$
+
+#### Joint one-sided test for both covariates
+
+```{r}
+# One-sided tests for age >= 60 and SBP >= 140
+H_joint <- hypothesis(
+  fit_brms,
+  c("age60geq60 > 0", "sbp140geq140 > 0"),
+  alpha = 0.05
+)
+
+# Detailed summary (posterior mean, CI, Post.Prob, Evid.Ratio)
+H_joint
+
+# Extract posterior probabilities and evidence ratios
+H_joint$hypothesis$Post.Prob
+H_joint$hypothesis$Evid.Ratio
+```
+
+
+**Interpretation.**  
+A `Post.Prob` close to **1** indicates strong posterior evidence that the coefficient is **positive**.  
+A large `Evid.Ratio` (for example, > 10) provides substantial evidence in favor of  
+$$
+H_1: \beta > 0.
+$$  
+In our case, both `age60geq60` and `sbp140geq140` show high posterior probabilities, suggesting that being older than 60 and having systolic blood pressure above 140 mmHg are both strongly associated with an increased probability of myocardial infarction.
+
+
 
 
 ## Interpreting Results
@@ -205,7 +283,7 @@ In this section, we calculate the odds ratios for `age60` and `sbp140` by transf
 ```{r, warning = FALSE}
 # Extract posterior samples
 posterior_samples <- brms::as_draws_df(fit_brms) %>% 
-  dplyr::select(starts_with("b_age60>EQ60"), starts_with("b_sbp140>EQ140"))
+  dplyr::select(starts_with("b_age60geq60"), starts_with("b_sbp140geq140"))
 names(posterior_samples) <- c("b_age60", "b_sbp140")
 
 # Calculate odds ratios for age60 and sbp140
@@ -282,8 +360,10 @@ Next, we predict the probability of myocardial infarction for new individuals wi
 ```{r}
 # Create new data for predictions
 new_data <- tibble(
-  age60 = factor(c("<60", ">=60", "<60", ">=60"), levels = c("<60", ">=60")),
-  sbp140 = factor(c("<140", ">=140", ">=140", "<140"), levels = c("<140", ">=140"))
+  age60 = factor(c("leq60", "geq60", "leq60", "geq60"),
+                 levels = c("leq60", "geq60")),
+  sbp140 = factor(c("leq140", "geq140", "geq140", "leq140"),
+                  levels = c("leq140", "geq140"))
 )
 
 # Predict the probability of myocardial infarction (MI) for new individuals
@@ -315,7 +395,7 @@ To guide clinical action, we define a simple decision rule based on this posteri
 - If the **true risk of infarction** exceeds **0.25**, the patient is considered at high risk and **should receive treatment**.
 
 Using the posterior draws from the model, we compute
-$P(p_i > 0.25 \mid \boldsymbol{y})$
+$P(\pi_i > 0.25 \mid \boldsymbol{y})$
 which quantifies **how confident we are** that a patient’s true risk is above the clinical threshold.
 
 In practice, we will make a decision **only when this probability is greater than 0.8**, meaning there is at least an 80% posterior certainty that the patient’s risk exceeds 0.25.
